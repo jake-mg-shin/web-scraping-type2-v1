@@ -5,39 +5,41 @@ var axios = require('axios'),
 
 var writeStream = fs.createWriteStream('members.csv');
 
-// Write header
+var targetedUrl =
+  'https://www.saot.ca/search-for-an-ot/?wpv_view_count=54581-TCPID54478&wpv-wpcf-city=Calgary&wpv-wpcf-what-are-your-areas-of-practice=&wpv_filter_submit=Search';
+
+// Write header on CSV
 writeStream.write(`Member's data \n`);
 
 function getLinks() {
+  var links = [];
+
   axios
-    .get(
-      'https://www.saot.ca/search-for-an-ot/?wpv_view_count=54581-TCPID54478&wpv-wpcf-city=Calgary&wpv-wpcf-what-are-your-areas-of-practice=&wpv_filter_submit=Search'
-    )
+    .get(targetedUrl)
     .then(res => {
       var $ = cheerio.load(res.data.toString());
       var $bodyList = $('tbody.wpv-loop tr');
 
-      var links = [];
-
-      $bodyList.each(function(i, el) {
-        links[i] = $(el)
+      $bodyList.each(function(i, element) {
+        links[i] = $(element)
           .first('td')
           .find('a')
           .attr('href');
       });
       // console.log(links);
-
+    })
+    .then(function getData() {
       for (var i = 0; i < links.length; i++) {
         axios
           .get(links[i])
           .then(res => {
             if (res.status == 200) {
-              function getData() {
+              function eachData() {
                 var result = [];
                 var $ = cheerio.load(res.data);
                 var $dataList = $('div.entry-content');
 
-                $dataList.each(function(el) {
+                $dataList.each(function(element) {
                   result[i] = $(this).text();
                 });
                 // console.log(result);
@@ -46,10 +48,14 @@ function getLinks() {
                 writeStream.write(`${result} \n`);
               }
 
-              getData();
+              eachData();
             }
           })
-          .catch(err => {});
+          .catch(function failHandler(err) {
+            setTimeout(() => {
+              console.log('delaying for 10s');
+            }, 10000);
+          });
       }
     });
 }
