@@ -1,23 +1,52 @@
 var axios = require('axios'),
   cheerio = require('cheerio'),
-  request = require('request'),
   fs = require('fs');
 
 var writeStream = fs.createWriteStream('members.csv');
 
 var targetedUrl =
   'https://www.saot.ca/search-for-an-ot/?wpv_view_count=54581-TCPID54478&wpv-wpcf-city=Calgary&wpv-wpcf-what-are-your-areas-of-practice=&wpv_filter_submit=Search';
+var links = [];
+var linksErr = [];
+var result = [];
+var resultErr = [];
 
 // Write header on CSV
 writeStream.write(`Member's data \n`);
 
-function getLinks() {
-  var links = [];
+function getData() {
+  links.forEach(async link => {
+    await axios
+      .get(link)
+      .then(res => {
+        if (res.status == 200) {
+          var $ = cheerio.load(res.data);
+          var $dataList = $('div.entry-content');
 
+          $dataList.each(function(element) {
+            result = $(this).text();
+          });
+          // console.log(result);
+
+          // Write row to CSV
+          writeStream.write(`${result} \n`);
+        }
+      })
+      .catch(err => {
+        console.log('getData request err');
+
+        resultErr.push(link);
+      });
+  });
+}
+
+function getLinks() {
   axios
     .get(targetedUrl)
     .then(res => {
-      var $ = cheerio.load(res.data.toString());
+      // console.log(typeof res);
+
+      var $ = cheerio.load(res.data);
       var $bodyList = $('tbody.wpv-loop tr');
 
       $bodyList.each(function(i, element) {
@@ -27,36 +56,14 @@ function getLinks() {
           .attr('href');
       });
       // console.log(links);
+
+      getData();
     })
-    .then(function getData() {
-      for (var i = 0; i < links.length; i++) {
-        axios
-          .get(links[i])
-          .then(res => {
-            if (res.status == 200) {
-              function eachData() {
-                var result = [];
-                var $ = cheerio.load(res.data);
-                var $dataList = $('div.entry-content');
+    .catch(err => {
+      console.log('getLinks request err');
 
-                $dataList.each(function(element) {
-                  result[i] = $(this).text();
-                });
-                // console.log(result);
-
-                // Write row to CSV
-                writeStream.write(`${result} \n`);
-              }
-
-              eachData();
-            }
-          })
-          .catch(function failHandler(err) {
-            setTimeout(() => {
-              console.log('delaying for 10s');
-            }, 10000);
-          });
-      }
+      // linksErr.push(link);
+      //   console.log(linksErr);
     });
 }
 
