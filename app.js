@@ -2,70 +2,83 @@ var axios = require('axios'),
   cheerio = require('cheerio'),
   fs = require('fs');
 
-var writeStream = fs.createWriteStream('members.csv');
+var writeStream = fs.createWriteStream('DataOfRotaryClub.csv');
 
-var targetedUrl =
-  'https://www.saot.ca/search-for-an-ot/?wpv_view_count=54581-TCPID54478&wpv-wpcf-city=Calgary&wpv-wpcf-what-are-your-areas-of-practice=&wpv_filter_submit=Search';
+var url =
+  'https://my.rotary.org/en/search/club-finder/location?location=Calgary%2C%20AB%2C%20Canada&distance=25&units=Miles&day=Any&time=Any&type=Rotary%20Club&toggle_state=search&latitude=51.04473309999999&longitude=-114.0718831&category=Club%20Location';
+
 var links = [];
-var linksErr = [];
-var result = [];
-var resultErr = [];
 
 // Write header on CSV
-writeStream.write(`Member's data \n`);
+writeStream.write(`DataOfRotaryClub \n`);
 
-function getData() {
-  links.forEach(async link => {
-    await axios
-      .get(link)
+const getData = () => {
+  links.forEach(link => {
+    const url2 = `https://my.rotary.org` + link;
+    // console.log(url2);
+
+    axios
+      .get(url2)
       .then(res => {
         if (res.status == 200) {
           var $ = cheerio.load(res.data);
-          var $dataList = $('div.entry-content');
+          var $dataList = $('.content');
+          // console.log($dataList);
 
-          $dataList.each(function(element) {
-            result = $(this).text();
+          $dataList.each((i, el) => {
+            const NameOfClub = $(el)
+              .children('h1')
+              .text();
+
+            const Address = $(el)
+              .children('.club-general')
+              .find('.club-meeting-address')
+              .text();
+
+            const MeetingTime = $(el)
+              .children('.club-general')
+              .find('.club-meeting-time')
+              .text();
+
+            const Website = $(el)
+              .find('.club-website')
+              .children('a')
+              .attr('href');
+
+            // Write row to CSV
+            writeStream.write(
+              `${NameOfClub}, ${Address}, ${MeetingTime}, ${Website} \n`
+            );
           });
-          // console.log(result);
-
-          // Write row to CSV
-          writeStream.write(`${result} \n`);
         }
       })
       .catch(err => {
         console.log('getData request err');
-
-        resultErr.push(link);
+        // console.log(err);
       });
   });
-}
+};
 
-function getLinks() {
-  axios
-    .get(targetedUrl)
-    .then(res => {
-      // console.log(typeof res);
+const getLinks = async () => {
+  try {
+    return await axios.get(url).then(res => {
+      // console.log(res);
 
       var $ = cheerio.load(res.data);
-      var $bodyList = $('tbody.wpv-loop tr');
+      var $bodyList = $('.club-name-link').children('a');
 
-      $bodyList.each(function(i, element) {
-        links[i] = $(element)
-          .first('td')
-          .find('a')
-          .attr('href');
+      $bodyList.each((i, el) => {
+        links[i] = $(el).attr('href');
       });
       // console.log(links);
-
-      getData();
-    })
-    .catch(err => {
-      console.log('getLinks request err');
-
-      // linksErr.push(link);
-      //   console.log(linksErr);
     });
-}
+  } catch (err) {
+    console.log('getLinks request err');
+    // console.log(err);
+  } finally {
+    getData();
+  }
+};
 
 function init() {
   getLinks();
