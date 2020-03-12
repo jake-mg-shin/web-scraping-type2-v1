@@ -1,87 +1,92 @@
-var axios = require('axios'),
-  cheerio = require('cheerio'),
-  fs = require('fs');
+const axios = require("axios"),
+  cheerio = require("cheerio"),
+  fs = require("fs");
 
-var writeStream = fs.createWriteStream('DataOfRotaryClub.csv');
+const writeStream = fs.createWriteStream("fromInformAlberta.csv");
 
-var url =
-  'https://my.rotary.org/en/search/club-finder/location?location=Calgary%2C%20AB%2C%20Canada&distance=25&units=Miles&day=Any&time=Any&type=Rotary%20Club&toggle_state=search&latitude=51.04473309999999&longitude=-114.0718831&category=Club%20Location';
+const url1 =
+  "https://informalberta.ca/public/common/index_SearchPager.do;jsessionid=FC5A57D805AD9F47DB10C1FF924768BD?page=3#relevantListingsAnchor";
+const url2 = "https://informalberta.ca/public/";
 
-var links = [];
+let links1 = [];
+let links2 = [];
 
 // Write header on CSV
-writeStream.write(`DataOfRotaryClub \n`);
+writeStream.write(`fromInformAlberta \n`);
 
-const getData = () => {
-  links.forEach(link => {
-    const url2 = `https://my.rotary.org` + link;
-    // console.log(url2);
-
+getData = async () => {
+  await links2.forEach(link => {
     axios
-      .get(url2)
+      .get(link)
       .then(res => {
-        if (res.status == 200) {
-          var $ = cheerio.load(res.data);
-          var $dataList = $('.content');
-          // console.log($dataList);
+        // console.log(res);
+        const $ = cheerio.load(res.data);
+        const $bodyList = $("div#orgContact");
 
-          $dataList.each((i, el) => {
-            const NameOfClub = $(el)
-              .children('h1')
-              .text();
+        $bodyList.each(function(i, el) {
+          const name = $(this)
+            .find("div#corpInfoHeading")
+            .text();
+          const address = $(this)
+            .find("div#address")
+            .text();
+          const contact = $(this)
+            .find("div#telephone")
+            .text();
+          const info = $(this)
+            .find("div.expandableDataArea")
+            .text();
 
-            const Address = $(el)
-              .children('.club-general')
-              .find('.club-meeting-address')
-              .text();
-
-            const MeetingTime = $(el)
-              .children('.club-general')
-              .find('.club-meeting-time')
-              .text();
-
-            const Website = $(el)
-              .find('.club-website')
-              .children('a')
-              .attr('href');
-
-            // Write row to CSV
-            writeStream.write(
-              `${NameOfClub}, ${Address}, ${MeetingTime}, ${Website} \n`
-            );
-          });
-        }
+          // Write row to CSV
+          writeStream.write(`${name}, ${address}, ${contact}, ${info} \n`);
+        });
       })
       .catch(err => {
-        console.log('getData request err');
         // console.log(err);
+        console.log("getData request err");
       });
   });
 };
 
-const getLinks = async () => {
-  try {
-    return await axios.get(url).then(res => {
-      // console.log(res);
+makeUrl = () => {
+  links1.forEach(link => {
+    const _link = url2 + link.substring(3);
+    // console.log(_link);
 
-      var $ = cheerio.load(res.data);
-      var $bodyList = $('.club-name-link').children('a');
+    links2.push(_link);
+  });
+  console.log(links2);
 
-      $bodyList.each((i, el) => {
-        links[i] = $(el).attr('href');
-      });
-      // console.log(links);
-    });
-  } catch (err) {
-    console.log('getLinks request err');
-    // console.log(err);
-  } finally {
-    getData();
-  }
+  getData();
 };
 
-function init() {
+getLinks = async () => {
+  await axios
+    .get(url1)
+    .then(res => {
+      const $ = cheerio.load(res.data);
+      const $bodyList = $("span.solLink");
+
+      $bodyList.each(function(i, el) {
+        const link = $(this)
+          .find("a")
+          .attr("href");
+
+        // console.log(link);
+        links1.push(link);
+      });
+      console.log(links1);
+    })
+    .then(() => {
+      makeUrl();
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+
+init = () => {
   getLinks();
-}
+};
 
 init();
