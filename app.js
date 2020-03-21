@@ -5,7 +5,7 @@ const axios = require("axios"),
 const writeStream = fs.createWriteStream("fromInformAlberta.csv");
 
 const url1 =
-  "https://informalberta.ca/public/results/relatedSubjects.do?taxonomyQueryId=2526";
+  "https://informalberta.ca/public/common/index_SearchPager.do;jsessionid=FC5A57D805AD9F47DB10C1FF924768BD?page=3#relevantListingsAnchor";
 const url2 = "https://informalberta.ca/public/";
 
 let links1 = [];
