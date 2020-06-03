@@ -1,92 +1,91 @@
-const axios = require("axios"),
-  cheerio = require("cheerio"),
-  fs = require("fs");
+const axios = require('axios'),
+    cheerio = require('cheerio'),
+    fs = require('fs');
 
-const writeStream = fs.createWriteStream("fromInformAlberta.csv");
+const writeStream = fs.createWriteStream('FederationOfCalgaryCommunities.csv');
+writeStream.write(`Community, Company, Web, Phone, Email, Address \n`);
 
-const url1 =
-  "https://informalberta.ca/public/common/index_SearchPager.do;jsessionid=FC5A57D805AD9F47DB10C1FF924768BD?page=3#relevantListingsAnchor";
-const url2 = "https://informalberta.ca/public/";
-
-let links1 = [];
-let links2 = [];
-
-// Write header on CSV
-writeStream.write(`fromInformAlberta \n`);
+let links = [];
+const alphabet = [
+    'a',
+    'b',
+    'c',
+    'd',
+    'e',
+    'f',
+    'g',
+    'h',
+    'i',
+    'j',
+    'k',
+    'l',
+    'm',
+    'n',
+    'o',
+    'p',
+    'q',
+    'r',
+    's',
+    't',
+    'u',
+    'v',
+    'w',
+    'x',
+    'y',
+    'z',
+];
 
 getData = async () => {
-  await links2.forEach(link => {
-    axios
-      .get(link)
-      .then(res => {
-        // console.log(res);
-        const $ = cheerio.load(res.data);
-        const $bodyList = $("div#orgContact");
+    await links.forEach((link) => {
+        axios
+            .get(link)
+            .then((res) => {
+                // console.log(res);
+                const $ = cheerio.load(res.data);
+                const target = $('div.ca_list_wrapper ul.ca_list li');
 
-        $bodyList.each(function(i, el) {
-          const name = $(this)
-            .find("div#corpInfoHeading")
-            .text();
-          const address = $(this)
-            .find("div#address")
-            .text();
-          const contact = $(this)
-            .find("div#telephone")
-            .text();
-          const info = $(this)
-            .find("div.expandableDataArea")
-            .text();
+                for (let i = 0; i < target.length; i++) {
+                    const com = $(target[i]).find('h2.postitle').text();
+                    const name = $(target[i]).find('h4').text();
+                    const web = $(target[i]).find('div p a').attr('href');
+                    const phone = $(target[i])
+                        .find('div p span.fcc_ca_phone')
+                        .text();
+                    const email = $(target[i])
+                        .find('div')
+                        .children('p')
+                        .slice(2, 3)
+                        .text();
+                    const address = $(target[i])
+                        .find('div p span.fcc_ca_address')
+                        .text();
+                    // console.log(com, name);
 
-          // Write row to CSV
-          writeStream.write(`${name}, ${address}, ${contact}, ${info} \n`);
-        });
-      })
-      .catch(err => {
-        // console.log(err);
-        console.log("getData request err");
-      });
-  });
-};
-
-makeUrl = () => {
-  links1.forEach(link => {
-    const _link = url2 + link.substring(3);
-    // console.log(_link);
-
-    links2.push(_link);
-  });
-  console.log(links2);
-
-  getData();
-};
-
-getLinks = async () => {
-  await axios
-    .get(url1)
-    .then(res => {
-      const $ = cheerio.load(res.data);
-      const $bodyList = $("span.solLink");
-
-      $bodyList.each(function(i, el) {
-        const link = $(this)
-          .find("a")
-          .attr("href");
-
-        // console.log(link);
-        links1.push(link);
-      });
-      console.log(links1);
-    })
-    .then(() => {
-      makeUrl();
-    })
-    .catch(err => {
-      console.log(err);
+                    writeStream.write(
+                        `${com}, ${name}, ${web}, ${phone}, ${email}, ${address} \n`
+                    );
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+                // console.log('getData request err');
+            });
     });
 };
 
+makeUrl = () => {
+    alphabet.forEach((a) => {
+        const url = `https://calgarycommunities.com/communities/?letter=${a}`;
+        // console.log(url);
+
+        links.push(url);
+    });
+    // console.log(links);
+    getData();
+};
+
 init = () => {
-  getLinks();
+    makeUrl();
 };
 
 init();

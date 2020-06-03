@@ -1,16 +1,11 @@
 {
-  "name": "web-scraping-v2",
+  "name": "webScraper",
   "version": "1.0.0",
-  "description": "web_scraping_v2",
   "main": "app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Jake",
-  "license": "ISC",
+  "author": "Dev.JS",
+  "license": "MIT",
   "dependencies": {
     "axios": "^0.19.2",
-    "cheerio": "^1.0.0-rc.3",
-    "request": "^2.88.2"
+    "cheerio": "^1.0.0-rc.3"
   }
 }
